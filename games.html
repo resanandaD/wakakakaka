@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="midnight">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Games · ChronosLove</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="particles-canvas"></canvas>
+  <nav class="navbar">
+    <strong style="color:var(--accent);">💖 ChronosLove</strong>
+    <div class="nav-links">
+      <a href="dashboard.html">Dashboard</a><a href="vault.html">Pesan</a><a href="gallery.html">Galeri</a><a href="capsule.html">Kapsul</a><a href="games.html" class="active">Games</a>
+    </div>
+    <div class="theme-switcher">
+      <button class="theme-btn" data-theme="midnight"></button><button class="theme-btn" data-theme="sunset"></button><button class="theme-btn" data-theme="cyberpunk"></button><button class="theme-btn" data-theme="minimal"></button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <h1>🎮 Mini Games</h1>
+
+    <!-- QUIZ -->
+    <section class="mt-2">
+      <h2>💭 Love Quiz</h2>
+      <div class="quiz-box" id="quiz-box"></div>
+      <div id="quiz-result" class="center" style="margin-top:1rem;"></div>
+    </section>
+
+    <!-- SCRATCH -->
+    <section class="mt-2">
+      <h2>🎁 Scratch Card</h2>
+      <div class="scratch-wrapper" id="scratch-wrapper">
+        <div class="scratch-prize">Kamu adalah alasan aku tersenyum hari ini 💖</div>
+        <canvas class="scratch-canvas" id="scratch-canvas"></canvas>
+      </div>
+      <div class="center mt-1"><button class="btn" id="scratch-reset" style="max-width:200px;margin:0 auto;">🔄 Reset</button></div>
+    </section>
+
+    <!-- NOTE WALL -->
+    <section class="mt-2">
+      <h2>📝 Virtual Note Wall</h2>
+      <div class="card mt-1">
+        <input id="note-name" class="code-input" placeholder="Nama kamu" style="letter-spacing:1px;text-transform:none;margin-bottom:0.75rem;" maxlength="20" />
+        <textarea id="note-text" placeholder="Tulis sesuatu manis..." maxlength="200" style="width:100%;min-height:80px;padding:1rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font-family:inherit;resize:vertical;outline:none;"></textarea>
+        <button class="btn" id="note-submit">📮 Tempel Catatan</button>
+      </div>
+      <div class="note-wall" id="note-wall"></div>
+    </section>
+  </main>
+
+  <div class="music-player">
+    <div class="music-title" id="music-title">🎵 Memuat...</div>
+    <div class="visualizer" id="visualizer"></div>
+    <div class="music-controls"><button id="play-btn">▶</button></div>
+  </div>
+  <audio id="bg-audio" preload="auto" loop></audio>
+
+  <script type="module">
+    import { initParticles, initThemeSwitcher, requireAccess, showToast, initMusicPlayer, APP_DATA, getLocalData, setLocalData } from './js/main.js';
+    requireAccess(); initParticles(); initThemeSwitcher(); initMusicPlayer();
+
+    /* ============ QUIZ ============ */
+    let quizIdx = 0, score = 0;
+    function renderQuiz() {
+      const box = document.getElementById('quiz-box');
+      const result = document.getElementById('quiz-result');
+      if (quizIdx >= APP_DATA.quiz.length) {
+        box.innerHTML = ''; result.innerHTML = `<h3>Skor kamu: ${score}/${APP_DATA.quiz.length}</h3><button class="btn" style="max-width:200px;margin:1rem auto 0;" onclick="location.reload()">Coba Lagi</button>`;
+        return;
+      }
+      const q = APP_DATA.quiz[quizIdx];
+      box.innerHTML = `<h3 style="margin-bottom:1rem;">${quizIdx + 1}. ${q.question}</h3>`;
+      q.options.forEach((opt, i) => {
+        const div = document.createElement('div'); div.className = 'quiz-option'; div.textContent = opt;
+        div.addEventListener('click', () => {
+          if (div.classList.contains('correct') || div.classList.contains('wrong')) return;
+          if (i === q.correct) { div.classList.add('correct'); score++; showToast('✅ Benar!'); }
+          else { div.classList.add('wrong'); showToast('❌ Salah'); }
+          setTimeout(() => { quizIdx++; renderQuiz(); }, 900);
+        });
+        box.appendChild(div);
+      });
+    }
+
+    /* ============ SCRATCH CARD ============ */
+    const sw = document.getElementById('scratch-wrapper'), sc = document.getElementById('scratch-canvas');
+    let sctx, drawing = false;
+    function initScratch() {
+      const rect = sw.getBoundingClientRect(); sc.width = rect.width; sc.height = rect.height; sctx = sc.getContext('2d');
+      const grad = sctx.createLinearGradient(0, 0, sc.width, sc.height); grad.addColorStop(0, '#6b7280'); grad.addColorStop(1, '#374151');
+      sctx.fillStyle = grad; sctx.fillRect(0, 0, sc.width, sc.height);
+      sctx.fillStyle = 'rgba(255,255,255,0.3)'; sctx.font = 'bold 18px sans-serif'; sctx.textAlign = 'center';
+      sctx.fillText('✨ GOSOK DI SINI ✨', sc.width / 2, sc.height / 2);
+      sctx.globalCompositeOperation = 'destination-out';
+    }
+    function scratchAt(x, y) { sctx.beginPath(); sctx.arc(x, y, 25, 0, Math.PI * 2); sctx.fill(); }
+    sc.addEventListener('mousedown', e => { drawing = true; scratchAt(e.offsetX, e.offsetY); });
+    sc.addEventListener('mousemove', e => { if (drawing) scratchAt(e.offsetX, e.offsetY); });
+    window.addEventListener('mouseup', () => drawing = false);
+    sc.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const r = sc.getBoundingClientRect(); scratchAt(e.touches[0].clientX - r.left, e.touches[0].clientY - r.top); }, { passive: false });
+    sc.addEventListener('touchmove', e => { if (!drawing) return; e.preventDefault(); const r = sc.getBoundingClientRect(); scratchAt(e.touches[0].clientX - r.left, e.touches[0].clientY - r.top); }, { passive: false });
+    window.addEventListener('touchend', () => drawing = false);
+    document.getElementById('scratch-reset').addEventListener('click', initScratch);
+    setTimeout(initScratch, 100);
+
+    /* ============ NOTE WALL (localStorage) ============ */
+    const NOTE_COLORS = ['#fde68a', '#fecaca', '#bfdbfe', '#bbf7d0', '#fbcfe8', '#ddd6fe'];
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    
+    function loadNotes() {
+      const notes = getLocalData('notes', []);
+      const wall = document.getElementById('note-wall'); wall.innerHTML = '';
+      notes.forEach(n => {
+        const div = document.createElement('div'); div.className = 'note'; div.style.background = n.color;
+        div.innerHTML = `${escapeHtml(n.content)}<div class="note-author">— ${escapeHtml(n.author)}</div>`;
+        wall.appendChild(div);
+      });
+    }
+
+    document.getElementById('note-submit').addEventListener('click', () => {
+      const name = document.getElementById('note-name').value.trim() || 'Anonim';
+      const content = document.getElementById('note-text').value.trim();
+      if (!content) { showToast('Tulis dulu pesannya ya'); return; }
+      
+      const notes = getLocalData('notes', []);
+      notes.unshift({ author: name, content, color: NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)] });
+      setLocalData('notes', notes);
+      
+      document.getElementById('note-text').value = '';
+      showToast('📮 Catatan terkirim!'); loadNotes();
+    });
+
+    renderQuiz(); loadNotes();
+  </script>
+</body>
+</html>

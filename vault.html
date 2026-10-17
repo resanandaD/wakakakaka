@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="midnight">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Message Vault · ChronosLove</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="particles-canvas"></canvas>
+  <nav class="navbar">
+    <strong style="color:var(--accent);">💖 ChronosLove</strong>
+    <div class="nav-links">
+      <a href="dashboard.html">Dashboard</a><a href="vault.html" class="active">Pesan</a><a href="gallery.html">Galeri</a><a href="capsule.html">Kapsul</a><a href="games.html">Games</a>
+    </div>
+    <div class="theme-switcher">
+      <button class="theme-btn" data-theme="midnight"></button><button class="theme-btn" data-theme="sunset"></button><button class="theme-btn" data-theme="cyberpunk"></button><button class="theme-btn" data-theme="minimal"></button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <h1>📬 Message Vault</h1>
+    <p style="color:var(--muted);margin-top:0.5rem;">Klik amplop untuk membuka pesan.</p>
+    <div id="envelopes" class="envelope-grid"></div>
+  </main>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2 id="modal-title"></h2>
+      <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;" id="modal-sender"></p>
+      <div class="modal-content" id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn" id="like-btn">💖 Like (<span id="like-count">0</span>)</button>
+        <button class="btn" id="hug-btn">🤗 Hug (<span id="hug-count">0</span>)</button>
+        <button class="btn" id="close-modal" style="background:var(--bg-2);color:var(--text);">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="music-player">
+    <div class="music-title" id="music-title">🎵 Memuat...</div>
+    <div class="visualizer" id="visualizer"></div>
+    <div class="music-controls"><button id="play-btn">▶</button></div>
+  </div>
+  <audio id="bg-audio" preload="auto" loop></audio>
+
+  <script type="module">
+    import { initParticles, initThemeSwitcher, requireAccess, showToast, initMusicPlayer, APP_DATA, getLocalData, setLocalData } from './js/main.js';
+    requireAccess(); initParticles(); initThemeSwitcher(); initMusicPlayer();
+
+    const envelopesEl = document.getElementById('envelopes');
+    const modal = document.getElementById('modal');
+    let currentIdx = -1;
+
+    // Render Amplop
+    function loadMessages() {
+      envelopesEl.innerHTML = '';
+      APP_DATA.messages.forEach((msg, idx) => {
+        const div = document.createElement('div');
+        div.className = 'envelope';
+        div.innerHTML = `<div class="envelope-title">${msg.title}</div><div class="envelope-sender">— ${msg.sender}</div>`;
+        div.addEventListener('click', () => openMessage(idx));
+        envelopesEl.appendChild(div);
+      });
+    }
+
+    function openMessage(idx) {
+      currentIdx = idx;
+      const msg = APP_DATA.messages[idx];
+      document.getElementById('modal-title').textContent = msg.title;
+      document.getElementById('modal-sender').textContent = `— ${msg.sender}`;
+      
+      const body = document.getElementById('modal-body');
+      body.textContent = '';
+      let i = 0;
+      (function typewrite() { if (i < msg.content.length) { body.textContent += msg.content[i++]; setTimeout(typewrite, 25); } })();
+
+      // Ambil data Like/Hug dari localStorage
+      const reactions = getLocalData('reactions', {});
+      document.getElementById('like-count').textContent = reactions[`msg_${idx}_like`] || 0;
+      document.getElementById('hug-count').textContent = reactions[`msg_${idx}_hug`] || 0;
+
+      modal.classList.add('active');
+    }
+
+    function react(type) {
+      if (currentIdx === -1) return;
+      const reactions = getLocalData('reactions', {});
+      const key = `msg_${currentIdx}_${type}`;
+      reactions[key] = (reactions[key] || 0) + 1;
+      setLocalData('reactions', reactions);
+      
+      document.getElementById(`${type}-count`).textContent = reactions[key];
+      showToast(type === 'like' ? '💖 Terkirim!' : '🤗 Pelukan terkirim!');
+    }
+
+    document.getElementById('like-btn').addEventListener('click', () => react('like'));
+    document.getElementById('hug-btn').addEventListener('click', () => react('hug'));
+    document.getElementById('close-modal').addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); });
+
+    loadMessages();
+  </script>
+</body>
+</html>

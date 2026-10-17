@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="midnight">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time Capsule · ChronosLove</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="particles-canvas"></canvas>
+  <nav class="navbar">
+    <strong style="color:var(--accent);">💖 ChronosLove</strong>
+    <div class="nav-links">
+      <a href="dashboard.html">Dashboard</a><a href="vault.html">Pesan</a><a href="gallery.html">Galeri</a><a href="capsule.html" class="active">Kapsul</a><a href="games.html">Games</a>
+    </div>
+    <div class="theme-switcher">
+      <button class="theme-btn" data-theme="midnight"></button><button class="theme-btn" data-theme="sunset"></button><button class="theme-btn" data-theme="cyberpunk"></button><button class="theme-btn" data-theme="minimal"></button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <h1>⏳ Time Capsule</h1>
+    <p style="color:var(--muted);margin-top:0.5rem;">Pesan-pesan ini terkunci hingga waktunya tiba.</p>
+    <div id="capsules" class="grid grid-2 mt-2"></div>
+  </main>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2 id="c-title"></h2>
+      <p class="modal-content" id="c-body" style="margin-top:1rem;"></p>
+      <div class="modal-actions"><button class="btn" id="c-close" style="background:var(--bg-2);color:var(--text);">Tutup</button></div>
+    </div>
+  </div>
+
+  <div class="music-player">
+    <div class="music-title" id="music-title">🎵 Memuat...</div>
+    <div class="visualizer" id="visualizer"></div>
+    <div class="music-controls"><button id="play-btn">▶</button></div>
+  </div>
+  <audio id="bg-audio" preload="auto" loop></audio>
+
+  <script type="module">
+    import { initParticles, initThemeSwitcher, requireAccess, showToast, initMusicPlayer, APP_DATA } from './js/main.js';
+    requireAccess(); initParticles(); initThemeSwitcher(); initMusicPlayer();
+
+    const list = document.getElementById('capsules');
+    const modal = document.getElementById('modal');
+
+    function loadCapsules() {
+      list.innerHTML = '';
+      APP_DATA.capsules.forEach((c, idx) => {
+        const unlock = new Date(c.unlock_at);
+        const locked = unlock > new Date();
+        
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style.cursor = locked ? 'not-allowed' : 'pointer';
+        div.innerHTML = `
+          <h3>${locked ? '🔒' : '🔓'} ${c.title}</h3>
+          <p style="margin-top:0.5rem;">${locked ? 'Terkunci. Akan terbuka pada:' : 'Sudah bisa dibuka!'}</p>
+          <p style="color:var(--accent);font-weight:600;margin-top:0.5rem;">${unlock.toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}</p>
+          <div class="countdown mt-1" id="cd-${idx}" style="justify-content:flex-start;"></div>
+        `;
+        div.addEventListener('click', () => {
+          if (locked) { showToast('Kapsul masih terkunci ⏳'); return; }
+          document.getElementById('c-title').textContent = c.title;
+          document.getElementById('c-body').textContent = c.message;
+          modal.classList.add('active');
+        });
+        list.appendChild(div);
+        if (locked) startCountdown('cd-' + idx, unlock);
+      });
+    }
+
+    function startCountdown(id, target) {
+      const el = document.getElementById(id); if (!el) return;
+      function tick() {
+        const diff = target - new Date();
+        if (diff <= 0) { el.innerHTML = '<span style="color:var(--accent);">Siap dibuka! Refresh halaman.</span>'; return; }
+        const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
+        el.innerHTML = `<div class="countdown-box"><div class="countdown-num">${d}</div><div class="countdown-label">Hari</div></div><div class="countdown-box"><div class="countdown-num">${h}</div><div class="countdown-label">Jam</div></div><div class="countdown-box"><div class="countdown-num">${m}</div><div class="countdown-label">Menit</div></div><div class="countdown-box"><div class="countdown-num">${s}</div><div class="countdown-label">Detik</div></div>`;
+      }
+      tick(); setInterval(tick, 1000);
+    }
+
+    document.getElementById('c-close').addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); });
+
+    loadCapsules();
+  </script>
+</body>
+</html>

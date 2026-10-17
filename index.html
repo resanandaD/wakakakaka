@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="midnight">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChronosLove · Gateway</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="particles-canvas"></canvas>
+
+  <main class="hero">
+    <h1>ChronosLove</h1>
+    <p>Sebuah portal pesan interaktif, ruang kenangan digital, dan kapsul waktu untuk orang yang kamu sayang.</p>
+
+    <div class="vault-card">
+      <h2>🔒 Buka Vault</h2>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;">Masukkan kode akses untuk membuka portal.</p>
+      <input id="code-input" class="code-input" placeholder="KODE AKSES" maxlength="20" autocomplete="off" />
+      <button id="open-vault-btn" class="btn">Buka Portal →</button>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initParticles, APP_DATA } from './js/main.js';
+    initParticles();
+
+    const btn = document.getElementById('open-vault-btn');
+    const input = document.getElementById('code-input');
+
+    btn.addEventListener('click', () => {
+      const code = input.value.trim();
+      if (!code) return;
+      btn.textContent = 'Memeriksa...';
+
+      setTimeout(() => {
+        if (code === APP_DATA.password) {
+          sessionStorage.setItem('vault_access', 'true');
+          btn.textContent = '✓ Berhasil!';
+          setTimeout(() => location.href = 'dashboard.html', 600);
+        } else {
+          input.style.borderColor = '#dc2626';
+          btn.textContent = 'Kode Salah';
+          setTimeout(() => { btn.textContent = 'Buka Portal →'; input.style.borderColor = ''; }, 1500);
+        }
+      }, 500); // simulasi loading
+    });
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') btn.click(); });
+  </script>
+</body>
+</html>
